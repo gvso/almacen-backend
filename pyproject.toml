@@ -1,0 +1,64 @@
+[project]
+name = "almacen"
+version = "0.1.0"
+description = "Almacen API"
+requires-python = ">=3.13"
+dependencies = [
+    "apispec==6.9.0",
+    "apispec-webframeworks==1.2.0",
+    "beautifulsoup4==4.14.3",
+    "dependency-injector==4.48.3",
+    "Flask==3.1.2",
+    "Flask-Cors==6.0.2",
+    "flask-openapi3==4.3.0",
+    "Flask-Migrate==4.1.0",
+    "Flask-RESTful==0.3.10",
+    "Flask-SQLAlchemy==3.1.1",
+    "gunicorn==23.0.0",
+    "mypy==1.19.1",
+    "psycopg2==2.9.11",
+    "pydantic==2.12.5",
+    "pydantic-settings==2.12.0",
+    "python-json-logger==4.0.0",
+    "sentry-sdk[flask]==2.49.0",
+    "SQLAlchemy==2.0.45",
+    "python-ulid>=3.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "debugpy==1.8.19",
+    "factory-boy==3.3.3",
+    "isort==7.0.0",
+    "pre-commit==4.5.1",
+    "pytest==9.0.2",
+    "pytest-xdist==3.8.0",
+    "ruff==0.14.11",
+    "SQLAlchemy-Utils==0.42.1",
+    "types-Flask-Cors==6.0.0.20250809",
+    "types-Flask-Migrate==4.1.0.20250809",
+    "watchdog==6.0.0",
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+allow_untyped_decorators = true
+disallow_untyped_calls = false
+disallow_subclassing_any = false
+implicit_reexport = false
+warn_unused_ignores = false
+exclude = "(.venv)/$"
+
+[tool.ruff]
+line-length = 120
+lint.select = ["E", "F", "Q"]
+lint.ignore = ["E203", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "double"

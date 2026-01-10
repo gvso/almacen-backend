@@ -1,0 +1,31 @@
+{
+  "editor.rulers": [120],
+  "python.analysis.autoImportCompletions": true,
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit",
+    }
+  },
+  "isort.args": ["--profile", "black"],
+  "python.testing.pytestArgs": [
+    "tests/",
+    "--cov=.",
+    "--cov-report=xml:coverage.xml"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportTypedDictNotRequiredAccess": "none"
+  },
+  "makefile.configureOnOpen": false,
+  "cursorpyright.analysis.autoImportCompletions": true,
+  "cursorpyright.analysis.diagnosticSeverityOverrides": {
+    "reportTypedDictNotRequiredAccess": "none"
+  },
+  "cursorpyright.analysis.typeCheckingMode": "basic",
+  "ruff.configuration": "./pyproject.toml"
+}

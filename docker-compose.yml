@@ -1,0 +1,41 @@
+services:
+  postgres:
+    container_name: almacen-db
+    image: postgres:16.0
+    environment:
+      POSTGRES_DB: almacen
+      POSTGRES_USER: local_db_user
+      POSTGRES_PASSWORD: local_db_password
+    volumes:
+      - ~/data/pgdata16:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U local_db_user -d almacen" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  almacen:
+    container_name: almacen
+    build:
+      context: .
+      args:
+        ENV: dev
+    image: almacen
+    stdin_open: true
+    tty: true
+    command: "python -m debugpy --listen 0.0.0.0:8050 -m gunicorn -c python:config 'main:app' --reload"
+    environment:
+      - FLASK_DEBUG=1
+    env_file:
+      - .env
+    ports:
+      - "8001:8001"
+      - "8050:8050"
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+
+  

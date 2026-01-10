@@ -5,8 +5,8 @@ import flask
 from dependency_injector.wiring import Provide, inject
 from flask_openapi3.blueprint import APIBlueprint
 from flask_openapi3.models.tag import Tag
-from pydantic import BaseModel
 
+from app.blueprints.v1.models import CheckoutRequest, OrderPath, ProductQuery
 from app.container import ApplicationContainer
 from app.controllers import OrderController
 from app.models.order import Order
@@ -14,20 +14,17 @@ from app.models.order import Order
 orders_bp = APIBlueprint("orders", __name__, abp_tags=[Tag(name="orders")], url_prefix="/api/v1/orders")
 
 
-class CheckoutRequest(BaseModel):
-    cart_token: str
-    contact_info: str | None = None
-    notes: str | None = None
-
-
-def _order_to_dict(order: Order) -> dict[str, Any]:
+def _order_to_dict(order: Order, language: str | None = None) -> dict[str, Any]:
     """Convert order to dict."""
     items: list[dict[str, Any]] = []
     for item in order.items:
+        translation = item.product.get_translation(language)
+        product_name = translation.name if translation else item.product.name
         items.append(
             {
                 "product_id": item.product_id,
-                "product_name": item.product.name,
+                "product_name": product_name,
+                "product_image_url": item.product.image_url,
                 "unit_price": str(item.unit_price),
                 "quantity": item.quantity,
                 "subtotal": str(item.unit_price * item.quantity),
@@ -47,6 +44,7 @@ def _order_to_dict(order: Order) -> dict[str, Any]:
 @inject
 def create_order(
     body: CheckoutRequest,
+    query: ProductQuery,
     order_controller: OrderController = Provide[ApplicationContainer.controllers.order],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Create an order from cart (checkout)."""
@@ -55,17 +53,18 @@ def create_order(
         contact_info=body.contact_info,
         notes=body.notes,
     )
-    return flask.jsonify(_order_to_dict(order)), HTTPStatus.CREATED
+    return flask.jsonify(_order_to_dict(order, query.language)), HTTPStatus.CREATED
 
 
 @orders_bp.get("/<string:order_id>")
 @inject
 def get_order(
-    order_id: str,
+    path: OrderPath,
+    query: ProductQuery,
     order_controller: OrderController = Provide[ApplicationContainer.controllers.order],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Get order by ULID."""
-    order = order_controller.get_order(order_id)
+    order = order_controller.get_order(path.order_id)
     if not order:
         return flask.jsonify({"error": "Order not found"}), HTTPStatus.NOT_FOUND
-    return flask.jsonify(_order_to_dict(order)), HTTPStatus.OK
+    return flask.jsonify(_order_to_dict(order, query.language)), HTTPStatus.OK

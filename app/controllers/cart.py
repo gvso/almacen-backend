@@ -87,7 +87,7 @@ class CartController:
         return self.get_cart(token)
 
     def clear_cart(self, token: str) -> None:
-        """Remove all items from the cart."""
+        """Remove the cart and all its items."""
         cart = self.get_cart(token)
-        for item in cart.items:
-            self._cart_item_repo.remove(item, hard_delete=True)
+        # Deleting the cart will cascade delete all items due to relationship config
+        self._cart_repo.remove(cart, hard_delete=True)

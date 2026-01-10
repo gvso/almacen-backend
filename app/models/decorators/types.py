@@ -20,16 +20,18 @@ class EnumStringType(TypeDecorator[EnumT]):
 
     def process_bind_param(self, value: EnumT | str | None, dialect: Any) -> str | None:
         if value is not None:
-            # There is a chance test factories may pass in a string OR relationship
-            # joins in model using String would require the enum to be passed in as a string
-            # This is a workaround to handle both cases.
+            # Check if it's already an enum instance first (before str check,
+            # since str-based enums like `class Status(str, Enum)` pass isinstance(v, str))
+            if isinstance(value, self._enum_class):
+                return value.name
+            # Handle string values (e.g., from test factories or raw strings)
             if isinstance(value, str):
                 try:
                     value = self._enum_class[value]
                 except KeyError:
                     self._logger.error(f"Invalid enum value: {value} for {self._enum_class}")
                     return None
-            return value.name
+                return value.name
         return None
 
     def process_result_value(self, name: str | None, dialect: Any) -> EnumT | None:

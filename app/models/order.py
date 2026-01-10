@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
 
 class OrderStatus(str, Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    CANCELLED = "cancelled"
+    confirmed = "confirmed"
+    processed = "processed"
+    cancelled = "cancelled"
 
 
 class Order(ModelWithDates):
@@ -27,7 +27,7 @@ class Order(ModelWithDates):
     id: Mapped[str] = mapped_column(sa.String(26), primary_key=True)
 
     status: Mapped[OrderStatus] = mapped_column(
-        EnumStringType(OrderStatus), nullable=False, default=OrderStatus.PENDING
+        EnumStringType(OrderStatus), nullable=False, default=OrderStatus.confirmed
     )
     total: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
     notes: Mapped[str | None] = mapped_column(sa.Text(), nullable=True)

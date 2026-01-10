@@ -48,16 +48,14 @@ class OrderController:
                 product_id=product.id,
                 quantity=cart_item.quantity,
                 unit_price=product.price,
-                product_name=product.name,
             )
             order_items.append(order_item)
 
         # Create order
         order = Order(
             id=order_id,
-            status=OrderStatus.PENDING,
+            status=OrderStatus.confirmed,
             total=total,
-            contact_info=contact_info,
             notes=notes,
             items=order_items,
         )
@@ -73,24 +71,13 @@ class OrderController:
         """Get order by ULID."""
         return self._order_repo.get_by_ulid(order_id)
 
-    def confirm_order(self, order_id: str) -> Order:
-        """Confirm an order."""
-        order = self._order_repo.get_by_ulid(order_id)
-        if not order:
-            raise InvalidDataError(f"Order {order_id} not found")
-
-        if order.status != OrderStatus.PENDING:
-            raise InvalidDataError(f"Order cannot be confirmed. Current status: {order.status.value}")
-
-        return self._order_repo.update(order, {"status": OrderStatus.CONFIRMED})
-
     def cancel_order(self, order_id: str) -> Order:
         """Cancel an order."""
         order = self._order_repo.get_by_ulid(order_id)
         if not order:
             raise InvalidDataError(f"Order {order_id} not found")
 
-        if order.status == OrderStatus.CANCELLED:
+        if order.status == OrderStatus.cancelled:
             raise InvalidDataError("Order is already cancelled")
 
-        return self._order_repo.update(order, {"status": OrderStatus.CANCELLED})
+        return self._order_repo.update(order, {"status": OrderStatus.cancelled})

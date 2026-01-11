@@ -109,6 +109,23 @@ def update_product(
     return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
 
 
+@products_bp.delete("/<int:product_id>")
+@require_admin_auth
+@inject
+def delete_product(
+    path: ProductPath,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Delete a product."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    db.session.delete(product)
+    db.session.commit()
+    return flask.jsonify({"status": "deleted"}), HTTPStatus.OK
+
+
 # ============ Product Translation Endpoints ============
 
 

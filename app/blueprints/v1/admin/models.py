@@ -84,6 +84,16 @@ class VariationTranslationCreate(BaseModel):
     name: str = Field(..., max_length=255)
 
 
+# Reorder models
+class ReorderItem(BaseModel):
+    id: int = Field(..., description="ID of the item")
+    order: int = Field(..., description="New order position")
+
+
+class ReorderRequest(BaseModel):
+    items: list[ReorderItem] = Field(..., description="List of items with their new order positions")
+
+
 # Image upload models
 class ImageUploadRequest(BaseModel):
     content_type: str = Field(..., description="MIME type of the image (e.g., 'image/jpeg')")

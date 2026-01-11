@@ -21,6 +21,7 @@ from .models import (
     ProductCreate,
     ProductPath,
     ProductUpdate,
+    ReorderRequest,
     TranslationCreate,
     TranslationPath,
     VariationCreate,
@@ -124,6 +125,25 @@ def delete_product(
     db.session.delete(product)
     db.session.commit()
     return flask.jsonify({"status": "deleted"}), HTTPStatus.OK
+
+
+@products_bp.patch("/reorder")
+@require_admin_auth
+@inject
+def reorder_products(
+    body: ReorderRequest,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Bulk update product order positions."""
+    for item in body.items:
+        product = product_repo.get(str(item.id))
+        if product:
+            product.order = item.order
+    db.session.commit()
+
+    products = product_repo.get_query().order_by(Product.order, Product.inserted_at).all()
+    data = [product_to_admin_dict(p) for p in products]
+    return flask.jsonify({"data": data}), HTTPStatus.OK
 
 
 # ============ Product Translation Endpoints ============
@@ -262,6 +282,30 @@ def delete_variation(
 
     db.session.delete(variation)
     db.session.commit()
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+@products_bp.patch("/<int:product_id>/variations/reorder")
+@require_admin_auth
+@inject
+def reorder_variations(
+    path: ProductPath,
+    body: ReorderRequest,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Bulk update variation order positions for a product."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    for item in body.items:
+        variation = variation_repo.get(str(item.id))
+        if variation and variation.product_id == product.id:
+            variation.order = item.order
+    db.session.commit()
+
     db.session.refresh(product)
     return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
 

@@ -66,8 +66,11 @@ def list_products(
     query: AdminProductQuery,
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
-    """List all products (including inactive) for admin management."""
+    """List all products (including inactive) for admin management. Optionally filter by type."""
     products_query = product_repo.get_query().order_by(Product.order, Product.inserted_at)
+
+    if query.type:
+        products_query = product_repo.filter_by_type(products_query, query.type)
 
     if query.search:
         search_term = f"%{query.search.lower()}%"
@@ -93,6 +96,7 @@ def create_product(
         image_url=body.image_url,
         order=body.order,
         is_active=body.is_active,
+        type=body.type,
     )
     product_repo.persist(product)
     return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.CREATED

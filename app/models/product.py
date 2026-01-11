@@ -1,4 +1,5 @@
 from decimal import Decimal
+from enum import Enum
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -10,6 +11,11 @@ if TYPE_CHECKING:
     from app.models.product_variation import ProductVariation
 
 
+class ProductType(str, Enum):
+    product = "product"
+    service = "service"
+
+
 class Product(ModelWithId, ModelWithDates):
     __tablename__ = "products"
 
@@ -19,6 +25,11 @@ class Product(ModelWithId, ModelWithDates):
     image_url: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
     order: Mapped[int] = mapped_column(sa.Integer(), nullable=False, server_default="0")
     is_active: Mapped[bool] = mapped_column(sa.Boolean(), nullable=False, server_default="true")
+    type: Mapped[ProductType] = mapped_column(
+        sa.Enum(ProductType, name="product_type", native_enum=False),
+        nullable=False,
+        server_default=ProductType.product.name,
+    )
 
     translations: Mapped[list["ProductTranslation"]] = relationship(
         "ProductTranslation", back_populates="product", lazy="selectin", cascade="all, delete-orphan"

@@ -19,8 +19,8 @@ def list_products(
     query: ProductQuery,
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
-    """Get all available products."""
-    products_query = product_repo.get_all_active()
+    """Get all available products. Optionally filter by type (product or service)."""
+    products_query = product_repo.get_all_active(product_type=query.type)
 
     if query.search:
         search_term = f"%{query.search.lower()}%"

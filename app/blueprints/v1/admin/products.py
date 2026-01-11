@@ -102,7 +102,7 @@ def update_product(
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
-    update_data = body.model_dump(exclude_none=True)
+    update_data = body.model_dump(exclude_unset=True)
     if update_data:
         product_repo.update(product, update_data)
 
@@ -235,7 +235,7 @@ def update_variation(
     if not variation or variation.product_id != product.id:
         return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
 
-    update_data = body.model_dump(exclude_none=True)
+    update_data = body.model_dump(exclude_unset=True)
     if update_data:
         variation_repo.update(variation, update_data)
 

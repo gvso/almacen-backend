@@ -82,3 +82,13 @@ class VariationTranslationPath(BaseModel):
 class VariationTranslationCreate(BaseModel):
     language: str = Field(..., max_length=5)
     name: str = Field(..., max_length=255)
+
+
+# Image upload models
+class ImageUploadRequest(BaseModel):
+    content_type: str = Field(..., description="MIME type of the image (e.g., 'image/jpeg')")
+
+
+class SignedUploadUrlResponse(BaseModel):
+    upload_url: str = Field(..., description="Signed URL for uploading via PUT request")
+    public_url: str = Field(..., description="Public URL of the image after upload")

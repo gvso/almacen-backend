@@ -9,6 +9,7 @@ from .sqlalchemy import SQLAlchemySettings
 
 
 class Settings(BaseSettings):
+    admin_password: str = Field(alias="ADMIN_PASSWORD")
     session_key: str = Field(alias="FLASK_SESSION_KEY")
     environment: Environment = Field(alias="ENVIRONMENT")
 

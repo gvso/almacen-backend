@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_openapi3 import Info, OpenAPI
 from werkzeug.exceptions import HTTPException
 
-from app.blueprints.v1 import cart_bp, health_bp, orders_bp, products_bp
+from app.blueprints.v1 import admin_bp, cart_bp, health_bp, orders_bp, products_bp
 from app.db import db, reconnect_db
 from app.exceptions import BaseError, ErrorType
 from app_settings import settings
@@ -19,6 +19,7 @@ def _register_endpoints(app: OpenAPI) -> None:
     app.register_api(products_bp)
     app.register_api(cart_bp)
     app.register_api(orders_bp)
+    app.register_api(admin_bp)
 
 
 def _setup_error_handlers(app: OpenAPI) -> None:

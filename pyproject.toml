@@ -23,6 +23,7 @@ dependencies = [
     "sentry-sdk[flask]==2.49.0",
     "SQLAlchemy==2.0.45",
     "python-ulid>=3.1.0",
+    "pyjwt>=2.10.1",
 ]
 
 [dependency-groups]

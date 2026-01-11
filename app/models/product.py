@@ -17,6 +17,7 @@ class Product(ModelWithId, ModelWithDates):
     description: Mapped[str | None] = mapped_column(sa.Text(), nullable=True)
     price: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
     image_url: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
+    order: Mapped[int] = mapped_column(sa.Integer(), nullable=False, server_default="0")
     is_active: Mapped[bool] = mapped_column(sa.Boolean(), nullable=False, server_default="true")
 
     translations: Mapped[list["ProductTranslation"]] = relationship(

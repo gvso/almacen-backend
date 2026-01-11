@@ -5,13 +5,14 @@ class CartPath(BaseModel):
     token: str
 
 
-class CartItemPath(BaseModel):
+class CartItemIdPath(BaseModel):
     token: str
-    product_id: int
+    item_id: int
 
 
 class AddItemRequest(BaseModel):
     product_id: int
+    variation_id: int | None = None
     quantity: int = 1
 
 

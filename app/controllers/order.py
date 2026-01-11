@@ -36,18 +36,25 @@ class OrderController:
 
         for cart_item in cart.items:
             product = cart_item.product
+            variation = cart_item.variation
 
             if not product.is_active:
                 raise InvalidDataError(f"Product '{product.name}' is no longer available")
 
-            item_total = product.price * cart_item.quantity
+            if variation and not variation.is_active:
+                raise InvalidDataError(f"Variation '{variation.name}' is no longer available")
+
+            # Use variation price if available, otherwise product price
+            unit_price = variation.price if variation and variation.price else product.price
+            item_total = unit_price * cart_item.quantity
             total += item_total
 
             order_item = OrderItem(
                 order_id=order_id,
                 product_id=product.id,
+                variation_id=cart_item.variation_id,
                 quantity=cart_item.quantity,
-                unit_price=product.price,
+                unit_price=unit_price,
             )
             order_items.append(order_item)
 

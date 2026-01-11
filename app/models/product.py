@@ -1,9 +1,13 @@
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import ModelWithDates, ModelWithId
+
+if TYPE_CHECKING:
+    from app.models.product_variation import ProductVariation
 
 
 class Product(ModelWithId, ModelWithDates):
@@ -17,6 +21,12 @@ class Product(ModelWithId, ModelWithDates):
 
     translations: Mapped[list["ProductTranslation"]] = relationship(
         "ProductTranslation", back_populates="product", lazy="selectin"
+    )
+    variations: Mapped[list["ProductVariation"]] = relationship(
+        "ProductVariation",
+        back_populates="product",
+        lazy="selectin",
+        order_by="ProductVariation.order",
     )
 
     def get_translation(self, language: str | None) -> "ProductTranslation | None":
@@ -35,6 +45,11 @@ class Product(ModelWithId, ModelWithDates):
         if translation:
             data["name"] = translation.name
             data["description"] = translation.description
+
+        # Include active variations with translations
+        data["variations"] = [
+            variation.to_dict_with_language(language) for variation in self.variations if variation.is_active
+        ]
         return data
 
 

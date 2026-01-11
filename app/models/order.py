@@ -10,6 +10,7 @@ from app.models.decorators.types import EnumStringType
 
 if TYPE_CHECKING:
     from app.models.product import Product
+    from app.models.product_variation import ProductVariation
 
 
 class OrderStatus(str, Enum):
@@ -42,8 +43,12 @@ class OrderItem(ModelWithId, ModelWithDates):
 
     order_id: Mapped[str] = mapped_column(sa.String(26), sa.ForeignKey("orders.id"), nullable=False)
     product_id: Mapped[int] = mapped_column(sa.BigInteger(), sa.ForeignKey("products.id"), nullable=False)
+    variation_id: Mapped[int | None] = mapped_column(
+        sa.BigInteger(), sa.ForeignKey("product_variations.id"), nullable=True
+    )
     quantity: Mapped[int] = mapped_column(sa.Integer(), nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
 
     order: Mapped["Order"] = relationship("Order", back_populates="items")
     product: Mapped["Product"] = relationship("Product", lazy="joined")
+    variation: Mapped["ProductVariation | None"] = relationship("ProductVariation", lazy="joined")

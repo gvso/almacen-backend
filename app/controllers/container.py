@@ -15,6 +15,7 @@ class ControllerContainer(containers.DeclarativeContainer):
         cart_repo=repos.cart,
         cart_item_repo=repos.cart_item,
         product_repo=repos.product,
+        product_variation_repo=repos.product_variation,
     )
 
     order = providers.Singleton(

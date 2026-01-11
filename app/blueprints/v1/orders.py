@@ -20,11 +20,23 @@ def _order_to_dict(order: Order, language: str | None = None) -> dict[str, Any]:
     for item in order.items:
         translation = item.product.get_translation(language)
         product_name = translation.name if translation else item.product.name
+
+        # Get variation name with translation and image
+        variation_name = None
+        image_url = item.product.image_url
+        if item.variation:
+            variation_translation = item.variation.get_translation(language)
+            variation_name = variation_translation.name if variation_translation else item.variation.name
+            if item.variation.image_url:
+                image_url = item.variation.image_url
+
         items.append(
             {
                 "product_id": item.product_id,
                 "product_name": product_name,
-                "product_image_url": item.product.image_url,
+                "image_url": image_url,
+                "variation_id": item.variation_id,
+                "variation_name": variation_name,
                 "unit_price": str(item.unit_price),
                 "quantity": item.quantity,
                 "subtotal": str(item.unit_price * item.quantity),

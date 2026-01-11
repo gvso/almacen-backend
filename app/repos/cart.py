@@ -14,9 +14,15 @@ class CartItemRepo(Repo[CartItem]):
     def __init__(self) -> None:
         super().__init__(CartItem)
 
-    def get_by_cart_and_product(self, cart_id: int, product_id: int) -> CartItem | None:
-        return (
-            self.get_query()
-            .filter(CartItem.cart_id == cart_id, CartItem.product_id == product_id)
-            .first()
+    def get_by_cart_and_product(
+        self, cart_id: int, product_id: int, variation_id: int | None = None
+    ) -> CartItem | None:
+        query = self.get_query().filter(
+            CartItem.cart_id == cart_id,
+            CartItem.product_id == product_id,
         )
+        if variation_id is None:
+            query = query.filter(CartItem.variation_id.is_(None))
+        else:
+            query = query.filter(CartItem.variation_id == variation_id)
+        return query.first()

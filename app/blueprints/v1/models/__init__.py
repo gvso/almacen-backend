@@ -1,6 +1,6 @@
 from app.blueprints.v1.models.cart import (
     AddItemRequest,
-    CartItemPath,
+    CartItemIdPath,
     CartPath,
     UpdateItemRequest,
 )
@@ -9,7 +9,7 @@ from app.blueprints.v1.models.products import ProductPath, ProductQuery
 
 __all__ = [
     "AddItemRequest",
-    "CartItemPath",
+    "CartItemIdPath",
     "CartPath",
     "CheckoutRequest",
     "OrderPath",

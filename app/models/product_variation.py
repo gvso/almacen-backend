@@ -22,7 +22,7 @@ class ProductVariation(ModelWithId, ModelWithDates):
 
     product: Mapped["Product"] = relationship("Product", back_populates="variations")
     translations: Mapped[list["ProductVariationTranslation"]] = relationship(
-        "ProductVariationTranslation", back_populates="variation", lazy="selectin"
+        "ProductVariationTranslation", back_populates="variation", lazy="selectin", cascade="all, delete-orphan"
     )
 
     def get_translation(self, language: str | None) -> "ProductVariationTranslation | None":

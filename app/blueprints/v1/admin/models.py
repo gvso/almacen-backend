@@ -31,6 +31,10 @@ class ErrorResponse(BaseModel):
 
 
 # Product models
+class AdminProductQuery(BaseModel):
+    search: str | None = None
+
+
 class ProductPath(BaseModel):
     product_id: int
 

@@ -18,6 +18,7 @@ from app.models import (
 from app.repos import ProductRepo, ProductVariationRepo
 
 from .models import (
+    AdminProductQuery,
     ProductCreate,
     ProductPath,
     ProductUpdate,
@@ -62,10 +63,17 @@ def product_to_admin_dict(product: Product) -> dict[str, Any]:
 @require_admin_auth
 @inject
 def list_products(
+    query: AdminProductQuery,
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """List all products (including inactive) for admin management."""
-    products = product_repo.get_query().order_by(Product.order, Product.inserted_at).all()
+    products_query = product_repo.get_query().order_by(Product.order, Product.inserted_at)
+
+    if query.search:
+        search_term = f"%{query.search.lower()}%"
+        products_query = product_repo.filter_by_search(products_query, search_term)
+
+    products = products_query.all()
     data = [product_to_admin_dict(p) for p in products]
     return flask.jsonify({"data": data}), HTTPStatus.OK
 

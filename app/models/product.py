@@ -21,13 +21,14 @@ class Product(ModelWithId, ModelWithDates):
     is_active: Mapped[bool] = mapped_column(sa.Boolean(), nullable=False, server_default="true")
 
     translations: Mapped[list["ProductTranslation"]] = relationship(
-        "ProductTranslation", back_populates="product", lazy="selectin"
+        "ProductTranslation", back_populates="product", lazy="selectin", cascade="all, delete-orphan"
     )
     variations: Mapped[list["ProductVariation"]] = relationship(
         "ProductVariation",
         back_populates="product",
         lazy="selectin",
         order_by="ProductVariation.order",
+        cascade="all, delete-orphan",
     )
 
     def get_translation(self, language: str | None) -> "ProductTranslation | None":

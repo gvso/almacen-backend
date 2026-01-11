@@ -20,7 +20,13 @@ def list_products(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Get all available products."""
-    products = product_repo.get_all_active().all()
+    products_query = product_repo.get_all_active()
+
+    if query.search:
+        search_term = f"%{query.search.lower()}%"
+        products_query = product_repo.filter_by_search(products_query, search_term, query.language)
+
+    products = products_query.all()
     data: list[dict[str, Any]] = [product.to_dict_with_language(query.language) for product in products]
     return flask.jsonify({"data": data}), HTTPStatus.OK
 

@@ -44,11 +44,13 @@ def _order_to_dict(order: Order, language: str | None = None) -> dict[str, Any]:
         )
     return {
         "id": order.id,
+        "label": order.display_label,
         "status": order.status.value,
         "total": str(order.total),
         "notes": order.notes,
         "items": items,
         "inserted_at": order.inserted_at.isoformat() if order.inserted_at else None,
+        "updated_at": order.updated_at.isoformat() if order.updated_at else None,
     }
 
 

@@ -32,10 +32,17 @@ class Order(ModelWithDates):
     )
     total: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
     notes: Mapped[str | None] = mapped_column(sa.Text(), nullable=True)
+    # Admin-editable label, defaults to the order ID
+    label: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
 
     items: Mapped[list["OrderItem"]] = relationship(
         "OrderItem", back_populates="order", cascade="all, delete-orphan", lazy="joined"
     )
+
+    @property
+    def display_label(self) -> str:
+        """Return label if set, otherwise return the order ID."""
+        return self.label if self.label else self.id
 
 
 class OrderItem(ModelWithId, ModelWithDates):

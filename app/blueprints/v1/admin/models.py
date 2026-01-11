@@ -2,6 +2,20 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from app.models.order import OrderStatus
+
+
+class OrderPath(BaseModel):
+    order_id: str
+
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus = Field(..., description="New order status")
+
+
+class OrderUpdate(BaseModel):
+    label: str | None = Field(None, max_length=100, description="Custom label for the order")
+
 
 class LoginRequest(BaseModel):
     password: str = Field(..., description="Admin password")

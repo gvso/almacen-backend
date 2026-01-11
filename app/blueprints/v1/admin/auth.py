@@ -11,8 +11,8 @@ from app_settings import settings
 
 from .models import ErrorResponse, LoginRequest, LoginResponse
 
-admin_bp = APIBlueprint(
-    "admin",
+auth_bp = APIBlueprint(
+    "admin_auth",
     __name__,
     abp_tags=[Tag(name="admin")],
     url_prefix="/api/v1/admin",
@@ -32,7 +32,7 @@ def create_jwt_token() -> str:
     return jwt.encode(payload, settings.session_key, algorithm=JWT_ALGORITHM)
 
 
-@admin_bp.post(
+@auth_bp.post(
     "/login",
     responses={
         HTTPStatus.OK: LoginResponse,
@@ -51,7 +51,7 @@ def login(body: LoginRequest) -> tuple[flask.Response, HTTPStatus]:
     return flask.jsonify({"token": token}), HTTPStatus.OK
 
 
-@admin_bp.get(
+@auth_bp.get(
     "/verify",
     responses={
         HTTPStatus.OK: None,
@@ -64,9 +64,8 @@ def verify() -> tuple[flask.Response, HTTPStatus]:
     return flask.jsonify({"status": "valid"}), HTTPStatus.OK
 
 
-@admin_bp.get("/dashboard")
+@auth_bp.get("/dashboard")
 @require_admin_auth
 def dashboard() -> tuple[flask.Response, HTTPStatus]:
     """Admin dashboard endpoint - protected by JWT."""
-    # Empty dashboard data for now
     return flask.jsonify({"message": "Welcome to the admin dashboard"}), HTTPStatus.OK

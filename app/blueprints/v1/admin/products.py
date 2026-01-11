@@ -1,0 +1,290 @@
+from http import HTTPStatus
+from typing import Any
+
+import flask
+from dependency_injector.wiring import Provide, inject
+from flask_openapi3.blueprint import APIBlueprint
+from flask_openapi3.models.tag import Tag
+
+from app.container import ApplicationContainer
+from app.db import db
+from app.middlewares.admin_auth import require_admin_auth
+from app.models import (
+    Product,
+    ProductTranslation,
+    ProductVariation,
+    ProductVariationTranslation,
+)
+from app.repos import ProductRepo, ProductVariationRepo
+
+from .models import (
+    ProductCreate,
+    ProductPath,
+    ProductUpdate,
+    TranslationCreate,
+    TranslationPath,
+    VariationCreate,
+    VariationPath,
+    VariationTranslationCreate,
+    VariationTranslationPath,
+    VariationUpdate,
+)
+
+products_bp = APIBlueprint(
+    "admin_products",
+    __name__,
+    abp_tags=[Tag(name="admin-products")],
+    url_prefix="/api/v1/admin/products",
+)
+
+
+def product_to_admin_dict(product: Product) -> dict[str, Any]:
+    """Convert product to dict with all translations and variations for admin."""
+    data = product.as_dict()
+    data["translations"] = [
+        {"language": t.language, "name": t.name, "description": t.description} for t in product.translations
+    ]
+    data["variations"] = [
+        {
+            **v.as_dict(),
+            "translations": [{"language": t.language, "name": t.name} for t in v.translations],
+        }
+        for v in product.variations
+    ]
+    return data
+
+
+# ============ Product Endpoints ============
+
+
+@products_bp.get("")
+@require_admin_auth
+@inject
+def list_products(
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """List all products (including inactive) for admin management."""
+    products = product_repo.get_query().order_by(Product.order, Product.inserted_at).all()
+    data = [product_to_admin_dict(p) for p in products]
+    return flask.jsonify({"data": data}), HTTPStatus.OK
+
+
+@products_bp.post("")
+@require_admin_auth
+@inject
+def create_product(
+    body: ProductCreate,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Create a new product."""
+    product = Product(
+        name=body.name,
+        description=body.description,
+        price=body.price,
+        image_url=body.image_url,
+        order=body.order,
+        is_active=body.is_active,
+    )
+    product_repo.persist(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.CREATED
+
+
+@products_bp.put("/<int:product_id>")
+@require_admin_auth
+@inject
+def update_product(
+    path: ProductPath,
+    body: ProductUpdate,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Update a product's fields."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    update_data = body.model_dump(exclude_none=True)
+    if update_data:
+        product_repo.update(product, update_data)
+
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+# ============ Product Translation Endpoints ============
+
+
+@products_bp.post("/<int:product_id>/translations")
+@require_admin_auth
+@inject
+def create_or_update_translation(
+    path: ProductPath,
+    body: TranslationCreate,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Create or update a product translation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    # Check if translation exists
+    existing = next((t for t in product.translations if t.language == body.language), None)
+    if existing:
+        existing.name = body.name
+        existing.description = body.description
+    else:
+        translation = ProductTranslation(
+            product_id=product.id,
+            language=body.language,
+            name=body.name,
+            description=body.description,
+        )
+        db.session.add(translation)
+
+    db.session.commit()
+    db.session.expire(product)
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+@products_bp.delete("/<int:product_id>/translations/<language>")
+@require_admin_auth
+@inject
+def delete_translation(
+    path: TranslationPath,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Delete a product translation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    translation = next((t for t in product.translations if t.language == path.language), None)
+    if not translation:
+        return (
+            flask.jsonify({"error": "not_found", "error_description": "Translation not found"}),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    db.session.delete(translation)
+    db.session.commit()
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+# ============ Product Variation Endpoints ============
+
+
+@products_bp.post("/<int:product_id>/variations")
+@require_admin_auth
+@inject
+def create_variation(
+    path: ProductPath,
+    body: VariationCreate,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Create a new product variation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    variation = ProductVariation(
+        product_id=product.id,
+        name=body.name,
+        price=body.price,
+        image_url=body.image_url,
+        order=body.order or 0,
+        is_active=body.is_active,
+    )
+    db.session.add(variation)
+    db.session.commit()
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.CREATED
+
+
+@products_bp.put("/<int:product_id>/variations/<int:variation_id>")
+@require_admin_auth
+@inject
+def update_variation(
+    path: VariationPath,
+    body: VariationUpdate,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Update a product variation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    variation = variation_repo.get(str(path.variation_id))
+    if not variation or variation.product_id != product.id:
+        return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
+
+    update_data = body.model_dump(exclude_none=True)
+    if update_data:
+        variation_repo.update(variation, update_data)
+
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+@products_bp.delete("/<int:product_id>/variations/<int:variation_id>")
+@require_admin_auth
+@inject
+def delete_variation(
+    path: VariationPath,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Delete a product variation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    variation = variation_repo.get(str(path.variation_id))
+    if not variation or variation.product_id != product.id:
+        return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
+
+    db.session.delete(variation)
+    db.session.commit()
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+# ============ Variation Translation Endpoints ============
+
+
+@products_bp.post("/<int:product_id>/variations/<int:variation_id>/translations")
+@require_admin_auth
+@inject
+def create_or_update_variation_translation(
+    path: VariationTranslationPath,
+    body: VariationTranslationCreate,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Create or update a variation translation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    variation = variation_repo.get(str(path.variation_id))
+    if not variation or variation.product_id != product.id:
+        return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
+
+    # Check if translation exists
+    existing = next((t for t in variation.translations if t.language == body.language), None)
+    if existing:
+        existing.name = body.name
+    else:
+        translation = ProductVariationTranslation(
+            variation_id=variation.id,
+            language=body.language,
+            name=body.name,
+        )
+        db.session.add(translation)
+
+    db.session.commit()
+    # Expire and refresh to reload relationships
+    db.session.expire(variation)
+    db.session.expire(product)
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK

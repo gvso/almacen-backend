@@ -15,6 +15,13 @@ class SQLAlchemySettings(BaseSettings):
 
     @field_validator("engine_options")
     def create_engine_options(cls, v: Any, info: ValidationInfo) -> dict[str, Any]:
+        database_url = info.data.get("database_url", "")
+
+        # PgBouncer (used by fly.io managed Postgres) doesn't support
+        # setting statement_timeout via connect_args
+        if "pgbouncer" in database_url or "flympg.net" in database_url:
+            return {}
+
         statement_timeout = f"statement_timeout={info.data['statement_timeout']}"
         idle_in_transaction_session_timeout = (
             f"idle_in_transaction_session_timeout={info.data['idle_in_transaction_session_timeout']}"

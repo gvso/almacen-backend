@@ -28,6 +28,7 @@ from .models import (
     VariationCreate,
     VariationPath,
     VariationTranslationCreate,
+    VariationTranslationDeletePath,
     VariationTranslationPath,
     VariationUpdate,
 )
@@ -359,5 +360,36 @@ def create_or_update_variation_translation(
     # Expire and refresh to reload relationships
     db.session.expire(variation)
     db.session.expire(product)
+    db.session.refresh(product)
+    return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK
+
+
+@products_bp.delete("/<int:product_id>/variations/<int:variation_id>/translations/<language>")
+@require_admin_auth
+@inject
+def delete_variation_translation(
+    path: VariationTranslationDeletePath,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Delete a variation translation."""
+    product = product_repo.get(str(path.product_id))
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    variation = variation_repo.get(str(path.variation_id))
+    if not variation or variation.product_id != product.id:
+        return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
+
+    translation = next((t for t in variation.translations if t.language == path.language), None)
+    if not translation:
+        return (
+            flask.jsonify({"error": "not_found", "error_description": "Translation not found"}),
+            HTTPStatus.NOT_FOUND,
+        )
+
+    db.session.delete(translation)
+    db.session.commit()
+    db.session.expire(variation)
     db.session.refresh(product)
     return flask.jsonify(product_to_admin_dict(product)), HTTPStatus.OK

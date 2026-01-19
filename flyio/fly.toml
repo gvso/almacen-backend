@@ -1,0 +1,29 @@
+app = 'almacen-be'
+primary_region = 'iad'
+
+[build]
+dockerfile = "almacen.dockerfile"
+
+[env]
+GUNICORN_PORT = "8080"
+GUNICORN_NUM_WORKERS = "2"
+GUNICORN_NUM_THREADS = "4"
+GUNICORN_TIMEOUT = "120"
+GUNICORN_LOGLEVEL = "info"
+GUNICORN_WORKER_DIR = "/dev/shm"
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = 'stop'
+auto_start_machines = true
+min_machines_running = 0
+processes = ['app']
+
+[[vm]]
+memory = '512mb'
+cpu_kind = 'shared'
+cpus = 1
+
+[deploy]
+release_command = "flask db upgrade"

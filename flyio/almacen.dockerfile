@@ -19,3 +19,9 @@ RUN if [ "$ENV" = "dev" ]; then \
 
 # Add venv to PATH
 ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code (for production)
+COPY . .
+
+# Default command for production
+CMD ["gunicorn", "-c", "config.py", "main:app"]

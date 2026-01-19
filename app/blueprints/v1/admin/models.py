@@ -101,6 +101,12 @@ class VariationTranslationPath(BaseModel):
     variation_id: int
 
 
+class VariationTranslationDeletePath(BaseModel):
+    product_id: int
+    variation_id: int
+    language: str
+
+
 class VariationTranslationCreate(BaseModel):
     language: str = Field(..., max_length=5)
     name: str = Field(..., max_length=255)

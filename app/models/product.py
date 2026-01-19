@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 class ProductType(str, Enum):
     product = "product"
     service = "service"
+    housekeeping = "housekeeping"
 
 
 class Product(ModelWithId, ModelWithDates):

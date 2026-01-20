@@ -42,7 +42,7 @@ products_bp = APIBlueprint(
 
 
 def product_to_admin_dict(product: Product) -> dict[str, Any]:
-    """Convert product to dict with all translations and variations for admin."""
+    """Convert product to dict with all translations, variations, and tags for admin."""
     data = product.as_dict()
     data["translations"] = [
         {"language": t.language, "name": t.name, "description": t.description} for t in product.translations
@@ -53,6 +53,13 @@ def product_to_admin_dict(product: Product) -> dict[str, Any]:
             "translations": [{"language": t.language, "name": t.name} for t in v.translations],
         }
         for v in product.variations
+    ]
+    data["tags"] = [
+        {
+            **tag.as_dict(),
+            "translations": [{"language": t.language, "label": t.label} for t in tag.translations],
+        }
+        for tag in product.tags
     ]
     return data
 
@@ -67,7 +74,7 @@ def list_products(
     query: AdminProductQuery,
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
-    """List all products (including inactive) for admin management. Optionally filter by type."""
+    """List all products (including inactive) for admin management. Optionally filter by type, search, or tags."""
     products_query = product_repo.get_query().order_by(Product.order, Product.inserted_at)
 
     if query.type:
@@ -76,6 +83,12 @@ def list_products(
     if query.search:
         search_term = f"%{query.search.lower()}%"
         products_query = product_repo.filter_by_search(products_query, search_term)
+
+    if query.tag_ids:
+        # Parse comma-separated tag IDs
+        tag_id_list = [int(tid.strip()) for tid in query.tag_ids.split(",") if tid.strip().isdigit()]
+        if tag_id_list:
+            products_query = product_repo.filter_by_tags(products_query, tag_id_list)
 
     products = products_query.all()
     data = [product_to_admin_dict(p) for p in products]

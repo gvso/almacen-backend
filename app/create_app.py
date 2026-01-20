@@ -4,7 +4,8 @@ from http import HTTPStatus
 from flask import Response, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
-from flask_openapi3 import Info, OpenAPI
+from flask_openapi3.models.info import Info
+from flask_openapi3.openapi import OpenAPI
 from werkzeug.exceptions import HTTPException
 
 from app.blueprints.v1 import (
@@ -12,10 +13,12 @@ from app.blueprints.v1 import (
     admin_documents_bp,
     admin_orders_bp,
     admin_products_bp,
+    admin_tags_bp,
     cart_bp,
     health_bp,
     orders_bp,
     products_bp,
+    tags_bp,
 )
 from app.db import db, reconnect_db
 from app.exceptions import BaseError, ErrorType
@@ -26,12 +29,14 @@ from environment import Environment
 def _register_endpoints(app: OpenAPI) -> None:
     app.register_api(health_bp)
     app.register_api(products_bp)
+    app.register_api(tags_bp)
     app.register_api(cart_bp)
     app.register_api(orders_bp)
     app.register_api(admin_auth_bp)
     app.register_api(admin_documents_bp)
     app.register_api(admin_orders_bp)
     app.register_api(admin_products_bp)
+    app.register_api(admin_tags_bp)
 
 
 def _setup_error_handlers(app: OpenAPI) -> None:

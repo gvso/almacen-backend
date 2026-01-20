@@ -19,12 +19,18 @@ def list_products(
     query: ProductQuery,
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
-    """Get all available products. Optionally filter by type (product or service)."""
+    """Get all available products. Optionally filter by type, search term, or tags."""
     products_query = product_repo.get_all_active(product_type=query.type)
 
     if query.search:
         search_term = f"%{query.search.lower()}%"
         products_query = product_repo.filter_by_search(products_query, search_term, query.language)
+
+    if query.tag_ids:
+        # Parse comma-separated tag IDs
+        tag_id_list = [int(tid.strip()) for tid in query.tag_ids.split(",") if tid.strip().isdigit()]
+        if tag_id_list:
+            products_query = product_repo.filter_by_tags(products_query, tag_id_list)
 
     products = products_query.all()
     data: list[dict[str, Any]] = [product.to_dict_with_language(query.language) for product in products]

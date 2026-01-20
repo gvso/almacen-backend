@@ -9,6 +9,7 @@ from app.models.base import ModelWithDates, ModelWithId
 
 if TYPE_CHECKING:
     from app.models.product_variation import ProductVariation
+    from app.models.tag import Tag
 
 
 class ProductType(str, Enum):
@@ -42,6 +43,9 @@ class Product(ModelWithId, ModelWithDates):
         order_by="ProductVariation.order",
         cascade="all, delete-orphan",
     )
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag", secondary="product_tags", back_populates="products", lazy="selectin"
+    )
 
     def get_translation(self, language: str | None) -> "ProductTranslation | None":
         """Get translation for a specific language."""
@@ -64,6 +68,9 @@ class Product(ModelWithId, ModelWithDates):
         data["variations"] = [
             variation.to_dict_with_language(language) for variation in self.variations if variation.is_active
         ]
+
+        # Include tags with translations
+        data["tags"] = [tag.to_dict_with_language(language) for tag in self.tags]
         return data
 
 

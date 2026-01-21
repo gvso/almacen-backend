@@ -7,6 +7,7 @@ from flask_openapi3.blueprint import APIBlueprint
 from flask_openapi3.models.tag import Tag
 
 from app.container import ApplicationContainer
+from app.controllers import ProductController
 from app.db import db
 from app.middlewares.admin_auth import require_admin_auth
 from app.models import (
@@ -125,7 +126,7 @@ def update_product(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Update a product's fields."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
@@ -144,13 +145,28 @@ def delete_product(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Delete a product."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
     db.session.delete(product)
     db.session.commit()
     return flask.jsonify({"status": "deleted"}), HTTPStatus.OK
+
+
+@products_bp.post("/<int:product_id>/clone")
+@require_admin_auth
+@inject
+def clone_product(
+    path: ProductPath,
+    product_controller: ProductController = Provide[ApplicationContainer.controllers.product],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Clone a product with all its translations, variations, and tag associations."""
+    cloned_product = product_controller.clone_product(path.product_id)
+    if not cloned_product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    return flask.jsonify(product_to_admin_dict(cloned_product)), HTTPStatus.CREATED
 
 
 @products_bp.patch("/reorder")
@@ -162,7 +178,7 @@ def reorder_products(
 ) -> tuple[flask.Response, HTTPStatus]:
     """Bulk update product order positions."""
     for item in body.items:
-        product = product_repo.get(str(item.id))
+        product = product_repo.get(item.id)
         if product:
             product.order = item.order
     db.session.commit()
@@ -184,7 +200,7 @@ def create_or_update_translation(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Create or update a product translation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
@@ -216,7 +232,7 @@ def delete_translation(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Delete a product translation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
@@ -245,7 +261,7 @@ def create_variation(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Create a new product variation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
@@ -273,11 +289,11 @@ def update_variation(
     variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Update a product variation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
-    variation = variation_repo.get(str(path.variation_id))
+    variation = variation_repo.get(path.variation_id)
     if not variation or variation.product_id != product.id:
         return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
 
@@ -298,11 +314,11 @@ def delete_variation(
     variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Delete a product variation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
-    variation = variation_repo.get(str(path.variation_id))
+    variation = variation_repo.get(path.variation_id)
     if not variation or variation.product_id != product.id:
         return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
 
@@ -322,12 +338,12 @@ def reorder_variations(
     variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Bulk update variation order positions for a product."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
     for item in body.items:
-        variation = variation_repo.get(str(item.id))
+        variation = variation_repo.get(item.id)
         if variation and variation.product_id == product.id:
             variation.order = item.order
     db.session.commit()
@@ -349,11 +365,11 @@ def create_or_update_variation_translation(
     variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Create or update a variation translation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
-    variation = variation_repo.get(str(path.variation_id))
+    variation = variation_repo.get(path.variation_id)
     if not variation or variation.product_id != product.id:
         return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
 
@@ -386,11 +402,11 @@ def delete_variation_translation(
     variation_repo: ProductVariationRepo = Provide[ApplicationContainer.repos.product_variation],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Delete a variation translation."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
-    variation = variation_repo.get(str(path.variation_id))
+    variation = variation_repo.get(path.variation_id)
     if not variation or variation.product_id != product.id:
         return flask.jsonify({"error": "not_found", "error_description": "Variation not found"}), HTTPStatus.NOT_FOUND
 

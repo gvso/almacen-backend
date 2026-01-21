@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from typing import Any, Generator, Generic, Mapping, TypeVar
-from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import Column
@@ -24,11 +23,11 @@ class Repo(Generic[ModelT]):
     def get_query(self) -> Query[ModelT]:
         return self.session.query(self.model)
 
-    def get(self, primary_key: UUID | str) -> ModelT | None:
+    def get(self, primary_key: int) -> ModelT | None:
         """Gets entity by primary key"""
         return self.session.get(self.model, primary_key)
 
-    def get_or_fail(self, primary_key: UUID) -> ModelT:
+    def get_or_fail(self, primary_key: int) -> ModelT:
         obj = self.get(primary_key)
         if obj is None:
             raise EntityNotFoundError(f"{self.model.__tablename__} with id {primary_key} not found")

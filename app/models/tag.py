@@ -1,12 +1,14 @@
-from typing import TYPE_CHECKING
+from enum import Enum
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import ModelWithDates, ModelWithId
 
-if TYPE_CHECKING:
-    from app.models.product import Product
+
+class EntityType(str, Enum):
+    product = "product"
+    tip = "tip"
 
 
 class Tag(ModelWithId, ModelWithDates):
@@ -17,9 +19,6 @@ class Tag(ModelWithId, ModelWithDates):
 
     translations: Mapped[list["TagTranslation"]] = relationship(
         "TagTranslation", back_populates="tag", lazy="selectin", cascade="all, delete-orphan"
-    )
-    products: Mapped[list["Product"]] = relationship(
-        "Product", secondary="product_tags", back_populates="tags", lazy="selectin"
     )
 
     def get_translation(self, language: str | None) -> "TagTranslation | None":
@@ -55,16 +54,26 @@ class TagTranslation(ModelWithId):
     )
 
 
-class ProductTag(ModelWithId):
-    """Junction table for many-to-many relationship between products and tags."""
+class EntityTag(ModelWithId):
+    """Junction table for many-to-many relationship between entities (products, tips) and tags."""
 
-    __tablename__ = "product_tags"
+    __tablename__ = "entity_tags"
 
-    product_id: Mapped[int] = mapped_column(sa.ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    entity_type: Mapped[EntityType] = mapped_column(
+        sa.Enum(EntityType, name="entity_type", native_enum=False),
+        nullable=False,
+    )
+    entity_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False)
     tag_id: Mapped[int] = mapped_column(sa.ForeignKey("tags.id", ondelete="CASCADE"), nullable=False)
 
+    tag: Mapped["Tag"] = relationship("Tag", lazy="selectin")
+
     __table_args__ = (
-        sa.UniqueConstraint("product_id", "tag_id", name="uq_product_tag"),
-        sa.Index("ix_product_tags_product", "product_id"),
-        sa.Index("ix_product_tags_tag", "tag_id"),
+        sa.UniqueConstraint("entity_type", "entity_id", "tag_id", name="uq_entity_tag"),
+        sa.Index("ix_entity_tags_entity", "entity_type", "entity_id"),
+        sa.Index("ix_entity_tags_tag", "tag_id"),
     )
+
+
+# Keep ProductTag as an alias for backward compatibility during migration
+ProductTag = EntityTag

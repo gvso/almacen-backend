@@ -1,7 +1,15 @@
+from enum import Enum
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import ModelWithDates, ModelWithId
+from app.models.tag import EntityTag, EntityType, Tag
+
+
+class TipType(str, Enum):
+    quick_tip = "quick_tip"
+    business = "business"
 
 
 class Tip(ModelWithId, ModelWithDates):
@@ -11,12 +19,37 @@ class Tip(ModelWithId, ModelWithDates):
 
     title: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     description: Mapped[str] = mapped_column(sa.Text(), nullable=False)
+    image_url: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
     order: Mapped[int] = mapped_column(sa.Integer(), nullable=False, server_default="0")
     is_active: Mapped[bool] = mapped_column(sa.Boolean(), nullable=False, server_default="true")
+    tip_type: Mapped[TipType] = mapped_column(
+        sa.Enum(TipType, name="tip_type", native_enum=False),
+        nullable=False,
+        server_default=TipType.quick_tip.name,
+    )
 
     translations: Mapped[list["TipTranslation"]] = relationship(
         "TipTranslation", back_populates="tip", lazy="selectin", cascade="all, delete-orphan"
     )
+    _entity_tags: Mapped[list["EntityTag"]] = relationship(
+        "EntityTag",
+        primaryjoin="and_(Tip.id == foreign(EntityTag.entity_id), EntityTag.entity_type == 'tip')",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        viewonly=False,
+    )
+
+    @property
+    def tags(self) -> list["Tag"]:
+        """Get all tags for this tip."""
+        return [et.tag for et in self._entity_tags]
+
+    @tags.setter
+    def tags(self, new_tags: list["Tag"]) -> None:
+        """Set tags for this tip by replacing entity_tags."""
+        self._entity_tags = [
+            EntityTag(entity_type=EntityType.tip, entity_id=self.id, tag_id=tag.id) for tag in new_tags
+        ]
 
     def get_translation(self, language: str | None) -> "TipTranslation | None":
         """Get translation for a specific language."""
@@ -34,6 +67,8 @@ class Tip(ModelWithId, ModelWithDates):
         if translation:
             data["title"] = translation.title
             data["description"] = translation.description
+        # Include tags with translations
+        data["tags"] = [tag.to_dict_with_language(language) for tag in self.tags]
         return data
 
 

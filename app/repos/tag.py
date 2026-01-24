@@ -1,7 +1,8 @@
+from sqlalchemy import and_
 from sqlalchemy.orm import Query
 
 from app.models.product import Product, ProductType
-from app.models.tag import ProductTag, Tag
+from app.models.tag import EntityTag, EntityType, Tag
 from app.repos.base import Repo
 
 
@@ -25,8 +26,14 @@ class TagRepo(Repo[Tag]):
         """Get tags that have at least one active product of the specified type."""
         return (
             self.get_query()
-            .join(ProductTag, Tag.id == ProductTag.tag_id)
-            .join(Product, ProductTag.product_id == Product.id)
+            .join(EntityTag, Tag.id == EntityTag.tag_id)
+            .join(
+                Product,
+                and_(
+                    EntityTag.entity_id == Product.id,
+                    EntityTag.entity_type == EntityType.product,
+                ),
+            )
             .filter(Product.type == product_type, Product.is_active.is_(True))
             .distinct()
             .order_by(Tag.order, Tag.label)

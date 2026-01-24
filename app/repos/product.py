@@ -4,7 +4,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.models import Product
 from app.models.product import ProductTranslation, ProductType
-from app.models.tag import ProductTag
+from app.models.tag import EntityTag, EntityType
 from app.repos.base import Repo
 
 
@@ -48,5 +48,11 @@ class ProductRepo(Repo[Product]):
         """Filter products that have any of the specified tags."""
         if not tag_ids:
             return query
-        query = query.join(ProductTag, Product.id == ProductTag.product_id)
-        return query.filter(ProductTag.tag_id.in_(tag_ids)).distinct()
+        query = query.join(
+            EntityTag,
+            and_(
+                Product.id == EntityTag.entity_id,
+                EntityTag.entity_type == EntityType.product,
+            ),
+        )
+        return query.filter(EntityTag.tag_id.in_(tag_ids)).distinct()

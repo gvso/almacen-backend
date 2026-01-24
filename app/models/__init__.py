@@ -2,17 +2,19 @@ from .cart import Cart, CartItem
 from .order import Order, OrderItem, OrderStatus
 from .product import Product, ProductTranslation, ProductType
 from .product_variation import ProductVariation, ProductVariationTranslation
-from .tag import ProductTag, Tag, TagTranslation
-from .tip import Tip, TipTranslation
+from .tag import EntityTag, EntityType, ProductTag, Tag, TagTranslation
+from .tip import Tip, TipTranslation, TipType
 
 __all__ = [
     "Cart",
     "CartItem",
+    "EntityTag",
+    "EntityType",
     "Order",
     "OrderItem",
     "OrderStatus",
     "Product",
-    "ProductTag",
+    "ProductTag",  # Alias for backward compatibility
     "ProductTranslation",
     "ProductType",
     "ProductVariation",
@@ -21,4 +23,5 @@ __all__ = [
     "TagTranslation",
     "Tip",
     "TipTranslation",
+    "TipType",
 ]

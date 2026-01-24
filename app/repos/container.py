@@ -3,6 +3,7 @@ from dependency_injector import containers, providers
 from app.repos import (
     CartItemRepo,
     CartRepo,
+    EntityTagRepo,
     OrderRepo,
     ProductRepo,
     ProductVariationRepo,
@@ -19,3 +20,4 @@ class RepoContainer(containers.DeclarativeContainer):
     order = providers.Singleton(OrderRepo)
     tag = providers.Singleton(TagRepo)
     tip = providers.Singleton(TipRepo)
+    entity_tag = providers.Singleton(EntityTagRepo)

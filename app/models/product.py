@@ -6,10 +6,10 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import ModelWithDates, ModelWithId
+from app.models.tag import EntityTag, EntityType, Tag
 
 if TYPE_CHECKING:
     from app.models.product_variation import ProductVariation
-    from app.models.tag import Tag
 
 
 class ProductType(str, Enum):
@@ -43,9 +43,25 @@ class Product(ModelWithId, ModelWithDates):
         order_by="ProductVariation.order",
         cascade="all, delete-orphan",
     )
-    tags: Mapped[list["Tag"]] = relationship(
-        "Tag", secondary="product_tags", back_populates="products", lazy="selectin"
+    _entity_tags: Mapped[list["EntityTag"]] = relationship(
+        "EntityTag",
+        primaryjoin="and_(Product.id == foreign(EntityTag.entity_id), EntityTag.entity_type == 'product')",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        viewonly=False,
     )
+
+    @property
+    def tags(self) -> list["Tag"]:
+        """Get all tags for this product."""
+        return [et.tag for et in self._entity_tags]
+
+    @tags.setter
+    def tags(self, new_tags: list["Tag"]) -> None:
+        """Set tags for this product by replacing entity_tags."""
+        self._entity_tags = [
+            EntityTag(entity_type=EntityType.product, entity_id=self.id, tag_id=tag.id) for tag in new_tags
+        ]
 
     def get_translation(self, language: str | None) -> "ProductTranslation | None":
         """Get translation for a specific language."""

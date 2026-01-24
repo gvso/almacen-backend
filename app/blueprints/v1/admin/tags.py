@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from app.container import ApplicationContainer
 from app.db import db
 from app.middlewares.admin_auth import require_admin_auth
-from app.models.tag import ProductTag, Tag, TagTranslation
-from app.repos import ProductRepo, TagRepo
+from app.models.tag import EntityType, Tag, TagTranslation
+from app.repos import EntityTagRepo, ProductRepo, TagRepo, TipRepo
 
 tags_bp = APIBlueprint(
     "admin_tags",
@@ -46,12 +46,26 @@ class TagTranslationCreate(BaseModel):
     label: str = Field(..., max_length=100)
 
 
-class ProductTagsUpdate(BaseModel):
-    tag_ids: list[int] = Field(..., description="List of tag IDs to assign to the product")
-
-
 class ProductTagPath(BaseModel):
     product_id: int
+
+
+class ProductTagItemPath(BaseModel):
+    product_id: int
+    tag_id: int
+
+
+class EntityTagAdd(BaseModel):
+    tag_id: int = Field(..., description="ID of the tag to add")
+
+
+class TipTagPath(BaseModel):
+    tip_id: int
+
+
+class TipTagItemPath(BaseModel):
+    tip_id: int
+    tag_id: int
 
 
 class ReorderItem(BaseModel):
@@ -119,7 +133,7 @@ def get_tag(
     tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Get a specific tag by ID."""
-    tag = tag_repo.get(str(path.tag_id))
+    tag = tag_repo.get(path.tag_id)
     if not tag:
         return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
     return flask.jsonify(tag_to_admin_dict(tag)), HTTPStatus.OK
@@ -134,7 +148,7 @@ def update_tag(
     tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Update a tag's fields."""
-    tag = tag_repo.get(str(path.tag_id))
+    tag = tag_repo.get(path.tag_id)
     if not tag:
         return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
 
@@ -161,7 +175,7 @@ def delete_tag(
     tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Delete a tag."""
-    tag = tag_repo.get(str(path.tag_id))
+    tag = tag_repo.get(path.tag_id)
     if not tag:
         return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
 
@@ -179,7 +193,7 @@ def reorder_tags(
 ) -> tuple[flask.Response, HTTPStatus]:
     """Bulk update tag order positions."""
     for item in body.items:
-        tag = tag_repo.get(str(item.id))
+        tag = tag_repo.get(item.id)
         if tag:
             tag.order = item.order
     db.session.commit()
@@ -201,7 +215,7 @@ def create_or_update_tag_translation(
     tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Create or update a tag translation."""
-    tag = tag_repo.get(str(path.tag_id))
+    tag = tag_repo.get(path.tag_id)
     if not tag:
         return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
 
@@ -231,7 +245,7 @@ def delete_tag_translation(
     tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Delete a tag translation."""
-    tag = tag_repo.get(str(path.tag_id))
+    tag = tag_repo.get(path.tag_id)
     if not tag:
         return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
 
@@ -251,38 +265,6 @@ def delete_tag_translation(
 # ============ Product Tags Endpoints ============
 
 
-@tags_bp.put("/products/<int:product_id>")
-@require_admin_auth
-@inject
-def update_product_tags(
-    path: ProductTagPath,
-    body: ProductTagsUpdate,
-    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
-    tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
-) -> tuple[flask.Response, HTTPStatus]:
-    """Update the tags assigned to a product (replaces all existing tags)."""
-    product = product_repo.get(str(path.product_id))
-    if not product:
-        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
-
-    # Get the tags to assign
-    tags = tag_repo.get_by_ids(body.tag_ids) if body.tag_ids else []
-
-    # Verify all requested tags exist
-    if len(tags) != len(body.tag_ids):
-        return (
-            flask.jsonify({"error": "not_found", "error_description": "One or more tags not found"}),
-            HTTPStatus.NOT_FOUND,
-        )
-
-    # Replace product tags
-    product.tags = tags
-    db.session.commit()
-
-    # Return the updated product tags
-    return flask.jsonify({"data": [tag_to_admin_dict(t) for t in product.tags]}), HTTPStatus.OK
-
-
 @tags_bp.get("/products/<int:product_id>")
 @require_admin_auth
 @inject
@@ -291,8 +273,134 @@ def get_product_tags(
     product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
 ) -> tuple[flask.Response, HTTPStatus]:
     """Get all tags assigned to a product."""
-    product = product_repo.get(str(path.product_id))
+    product = product_repo.get(path.product_id)
     if not product:
         return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
 
     return flask.jsonify({"data": [tag_to_admin_dict(t) for t in product.tags]}), HTTPStatus.OK
+
+
+@tags_bp.post("/products/<int:product_id>")
+@require_admin_auth
+@inject
+def add_product_tag(
+    path: ProductTagPath,
+    body: EntityTagAdd,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
+    entity_tag_repo: EntityTagRepo = Provide[ApplicationContainer.repos.entity_tag],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Add a tag to a product."""
+    product = product_repo.get(path.product_id)
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    tag = tag_repo.get(body.tag_id)
+    if not tag:
+        return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
+
+    # Add the tag if not already assigned
+    if not entity_tag_repo.exists(EntityType.product, product.id, tag.id):
+        entity_tag_repo.add_tag(EntityType.product, product.id, tag.id)
+        db.session.refresh(product)
+
+    return flask.jsonify({"data": [tag_to_admin_dict(t) for t in product.tags]}), HTTPStatus.OK
+
+
+@tags_bp.delete("/products/<int:product_id>/tags/<int:tag_id>")
+@require_admin_auth
+@inject
+def remove_product_tag(
+    path: ProductTagItemPath,
+    product_repo: ProductRepo = Provide[ApplicationContainer.repos.product],
+    entity_tag_repo: EntityTagRepo = Provide[ApplicationContainer.repos.entity_tag],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Remove a tag from a product."""
+    product = product_repo.get(path.product_id)
+    if not product:
+        return flask.jsonify({"error": "not_found", "error_description": "Product not found"}), HTTPStatus.NOT_FOUND
+
+    # Find and delete the entity tag
+    deleted = entity_tag_repo.remove_tag(EntityType.product, product.id, path.tag_id)
+
+    if not deleted:
+        return flask.jsonify(
+            {"error": "not_found", "error_description": "Tag not assigned to product"}
+        ), HTTPStatus.NOT_FOUND
+
+    # Refresh product to get updated tags
+    db.session.refresh(product)
+
+    return flask.jsonify({"data": [tag_to_admin_dict(t) for t in product.tags]}), HTTPStatus.OK
+
+
+# ============ Tip Tags Endpoints ============
+
+
+@tags_bp.get("/tips/<int:tip_id>")
+@require_admin_auth
+@inject
+def get_tip_tags(
+    path: TipTagPath,
+    tip_repo: TipRepo = Provide[ApplicationContainer.repos.tip],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Get all tags assigned to a tip."""
+    tip = tip_repo.get(path.tip_id)
+    if not tip:
+        return flask.jsonify({"error": "not_found", "error_description": "Tip not found"}), HTTPStatus.NOT_FOUND
+
+    return flask.jsonify({"data": [tag_to_admin_dict(t) for t in tip.tags]}), HTTPStatus.OK
+
+
+@tags_bp.post("/tips/<int:tip_id>")
+@require_admin_auth
+@inject
+def add_tip_tag(
+    path: TipTagPath,
+    body: EntityTagAdd,
+    tip_repo: TipRepo = Provide[ApplicationContainer.repos.tip],
+    tag_repo: TagRepo = Provide[ApplicationContainer.repos.tag],
+    entity_tag_repo: EntityTagRepo = Provide[ApplicationContainer.repos.entity_tag],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Add a tag to a tip."""
+    tip = tip_repo.get(path.tip_id)
+    if not tip:
+        return flask.jsonify({"error": "not_found", "error_description": "Tip not found"}), HTTPStatus.NOT_FOUND
+
+    tag = tag_repo.get(body.tag_id)
+    if not tag:
+        return flask.jsonify({"error": "not_found", "error_description": "Tag not found"}), HTTPStatus.NOT_FOUND
+
+    # Add the tag if not already assigned
+    if not entity_tag_repo.exists(EntityType.tip, tip.id, tag.id):
+        entity_tag_repo.add_tag(EntityType.tip, tip.id, tag.id)
+        db.session.refresh(tip)
+
+    return flask.jsonify({"data": [tag_to_admin_dict(t) for t in tip.tags]}), HTTPStatus.OK
+
+
+@tags_bp.delete("/tips/<int:tip_id>/tags/<int:tag_id>")
+@require_admin_auth
+@inject
+def remove_tip_tag(
+    path: TipTagItemPath,
+    tip_repo: TipRepo = Provide[ApplicationContainer.repos.tip],
+    entity_tag_repo: EntityTagRepo = Provide[ApplicationContainer.repos.entity_tag],
+) -> tuple[flask.Response, HTTPStatus]:
+    """Remove a tag from a tip."""
+    tip = tip_repo.get(path.tip_id)
+    if not tip:
+        return flask.jsonify({"error": "not_found", "error_description": "Tip not found"}), HTTPStatus.NOT_FOUND
+
+    # Find and delete the entity tag
+    deleted = entity_tag_repo.remove_tag(EntityType.tip, tip.id, path.tag_id)
+
+    if not deleted:
+        return flask.jsonify(
+            {"error": "not_found", "error_description": "Tag not assigned to tip"}
+        ), HTTPStatus.NOT_FOUND
+
+    # Refresh tip to get updated tags
+    db.session.refresh(tip)
+
+    return flask.jsonify({"data": [tag_to_admin_dict(t) for t in tip.tags]}), HTTPStatus.OK

@@ -19,7 +19,7 @@ def list_tips(
     query: TipQuery,
     tip_repo: TipRepo = Provide[ApplicationContainer.repos.tip],
 ) -> tuple[flask.Response, HTTPStatus]:
-    """Get all active tips."""
-    tips = tip_repo.get_all_active().all()
+    """Get all active tips, optionally filtered by tip_type."""
+    tips = tip_repo.get_all_active(tip_type=query.tip_type).all()
     data: list[dict[str, Any]] = [tip.to_dict_with_language(query.language) for tip in tips]
     return flask.jsonify({"data": data}), HTTPStatus.OK

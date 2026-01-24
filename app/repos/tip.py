@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Query
 
-from app.models.tip import Tip
+from app.models.tip import Tip, TipType
 from app.repos.base import Repo
 
 
@@ -8,9 +8,16 @@ class TipRepo(Repo[Tip]):
     def __init__(self) -> None:
         super().__init__(Tip)
 
-    def get_all_active(self) -> Query[Tip]:
-        """Get all active tips ordered by order, then inserted_at."""
-        return self.get_query().filter(Tip.is_active.is_(True)).order_by(Tip.order, Tip.inserted_at)
+    def get_all_active(self, tip_type: str | None = None) -> Query[Tip]:
+        """Get all active tips ordered by order, then inserted_at.
+
+        Args:
+            tip_type: Optional filter by tip type ('quick_tip' or 'business')
+        """
+        query = self.get_query().filter(Tip.is_active.is_(True))
+        if tip_type:
+            query = query.filter(Tip.tip_type == TipType(tip_type))
+        return query.order_by(Tip.order, Tip.inserted_at)
 
     def get_all(self) -> Query[Tip]:
         """Get all tips ordered by order, then inserted_at (for admin)."""

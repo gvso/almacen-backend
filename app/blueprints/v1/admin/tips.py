@@ -32,10 +32,17 @@ admin_tips_bp = APIBlueprint(
 
 
 def tip_to_admin_dict(tip: Tip) -> dict[str, Any]:
-    """Convert tip to dict with all translations for admin."""
+    """Convert tip to dict with all translations and tags for admin."""
     data = tip.as_dict()
     data["translations"] = [
         {"language": t.language, "title": t.title, "description": t.description} for t in tip.translations
+    ]
+    data["tags"] = [
+        {
+            **tag.as_dict(),
+            "translations": [{"language": t.language, "label": t.label} for t in tag.translations],
+        }
+        for tag in tip.tags
     ]
     return data
 
@@ -72,8 +79,10 @@ def create_tip(
     tip = Tip(
         title=body.title,
         description=body.description,
+        image_url=body.image_url,
         order=order,
         is_active=body.is_active,
+        tip_type=body.tip_type,
     )
     tip_repo.persist(tip)
     return flask.jsonify(tip_to_admin_dict(tip)), HTTPStatus.CREATED

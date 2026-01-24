@@ -1,6 +1,14 @@
 from dependency_injector import containers, providers
 
-from app.repos import CartItemRepo, CartRepo, OrderRepo, ProductRepo, ProductVariationRepo, TagRepo
+from app.repos import (
+    CartItemRepo,
+    CartRepo,
+    OrderRepo,
+    ProductRepo,
+    ProductVariationRepo,
+    TagRepo,
+    TipRepo,
+)
 
 
 class RepoContainer(containers.DeclarativeContainer):
@@ -10,3 +18,4 @@ class RepoContainer(containers.DeclarativeContainer):
     cart_item = providers.Singleton(CartItemRepo)
     order = providers.Singleton(OrderRepo)
     tag = providers.Singleton(TagRepo)
+    tip = providers.Singleton(TipRepo)

@@ -14,11 +14,13 @@ from app.blueprints.v1 import (
     admin_orders_bp,
     admin_products_bp,
     admin_tags_bp,
+    admin_tips_bp,
     cart_bp,
     health_bp,
     orders_bp,
     products_bp,
     tags_bp,
+    tips_bp,
 )
 from app.db import db, reconnect_db
 from app.exceptions import BaseError, ErrorType
@@ -30,6 +32,7 @@ def _register_endpoints(app: OpenAPI) -> None:
     app.register_api(health_bp)
     app.register_api(products_bp)
     app.register_api(tags_bp)
+    app.register_api(tips_bp)
     app.register_api(cart_bp)
     app.register_api(orders_bp)
     app.register_api(admin_auth_bp)
@@ -37,6 +40,7 @@ def _register_endpoints(app: OpenAPI) -> None:
     app.register_api(admin_orders_bp)
     app.register_api(admin_products_bp)
     app.register_api(admin_tags_bp)
+    app.register_api(admin_tips_bp)
 
 
 def _setup_error_handlers(app: OpenAPI) -> None:

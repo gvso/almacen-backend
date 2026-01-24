@@ -3,6 +3,7 @@ from .order import Order, OrderItem, OrderStatus
 from .product import Product, ProductTranslation, ProductType
 from .product_variation import ProductVariation, ProductVariationTranslation
 from .tag import ProductTag, Tag, TagTranslation
+from .tip import Tip, TipTranslation
 
 __all__ = [
     "Cart",
@@ -18,4 +19,6 @@ __all__ = [
     "ProductVariationTranslation",
     "Tag",
     "TagTranslation",
+    "Tip",
+    "TipTranslation",
 ]

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Query
 
 from app.models.product import Product, ProductType
 from app.models.tag import EntityTag, EntityType, Tag
+from app.models.tip import Tip, TipType
 from app.repos.base import Repo
 
 
@@ -35,6 +36,24 @@ class TagRepo(Repo[Tag]):
                 ),
             )
             .filter(Product.type == product_type, Product.is_active.is_(True))
+            .distinct()
+            .order_by(Tag.order, Tag.label)
+            .all()
+        )
+
+    def get_tags_with_tips_by_type(self, tip_type: TipType) -> list[Tag]:
+        """Get tags that have at least one active tip of the specified type."""
+        return (
+            self.get_query()
+            .join(EntityTag, Tag.id == EntityTag.tag_id)
+            .join(
+                Tip,
+                and_(
+                    EntityTag.entity_id == Tip.id,
+                    EntityTag.entity_type == EntityType.tip,
+                ),
+            )
+            .filter(Tip.tip_type == tip_type, Tip.is_active.is_(True))
             .distinct()
             .order_by(Tag.order, Tag.label)
             .all()

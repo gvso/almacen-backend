@@ -17,6 +17,7 @@ class TipQuery(BaseModel):
     tip_type: Literal["quick_tip", "business"] | None = Field(
         None, description="Filter by tip type ('quick_tip' or 'business')"
     )
+    tag_ids: str | None = Field(None, description="Comma-separated tag IDs to filter by")
 
 
 class TipCreate(BaseModel):

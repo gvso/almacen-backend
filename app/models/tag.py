@@ -11,10 +11,20 @@ class EntityType(str, Enum):
     tip = "tip"
 
 
+class TagCategory(str, Enum):
+    product = "product"
+    tip = "tip"
+
+
 class Tag(ModelWithId, ModelWithDates):
     __tablename__ = "tags"
 
     label: Mapped[str] = mapped_column(sa.String(100), nullable=False, unique=True)
+    category: Mapped[TagCategory] = mapped_column(
+        sa.Enum(TagCategory, name="tag_category", native_enum=False),
+        nullable=False,
+        server_default=TagCategory.product.value,
+    )
     order: Mapped[int] = mapped_column(sa.Integer(), nullable=False, server_default="0")
 
     translations: Mapped[list["TagTranslation"]] = relationship(
@@ -31,8 +41,12 @@ class Tag(ModelWithId, ModelWithDates):
         return None
 
     def to_dict_with_language(self, language: str | None = None) -> dict:
-        """Convert to dict, using translated label if available."""
+        """Convert to dict, using translated label if available.
+
+        Includes 'key' field with the original/base label for URL matching.
+        """
         data = self.as_dict()
+        data["key"] = self.label  # Original label for URL matching
         translation = self.get_translation(language)
         if translation:
             data["label"] = translation.label

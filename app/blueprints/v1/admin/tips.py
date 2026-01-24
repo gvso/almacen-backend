@@ -9,6 +9,7 @@ from flask_openapi3.models.tag import Tag as OpenApiTag
 from app.blueprints.v1.models import (
     TipCreate,
     TipPath,
+    TipQuery,
     TipReorderRequest,
     TipTranslationCreate,
     TipTranslationPath,
@@ -54,10 +55,11 @@ def tip_to_admin_dict(tip: Tip) -> dict[str, Any]:
 @require_admin_auth
 @inject
 def list_tips(
+    query: TipQuery,
     tip_repo: TipRepo = Provide[ApplicationContainer.repos.tip],
 ) -> tuple[flask.Response, HTTPStatus]:
-    """List all tips for admin management."""
-    tips = tip_repo.get_all().all()
+    """List all tips for admin management, optionally filtered by tip_type."""
+    tips = tip_repo.get_all(tip_type=query.tip_type).all()
     data = [tip_to_admin_dict(t) for t in tips]
     return flask.jsonify({"data": data}), HTTPStatus.OK
 

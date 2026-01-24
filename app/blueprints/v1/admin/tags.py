@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from app.container import ApplicationContainer
 from app.db import db
 from app.middlewares.admin_auth import require_admin_auth
-from app.models.tag import EntityType, Tag, TagTranslation
+from app.models.tag import EntityType, Tag, TagCategory, TagTranslation
 from app.repos import EntityTagRepo, ProductRepo, TagRepo, TipRepo
 
 tags_bp = APIBlueprint(
@@ -35,10 +35,12 @@ class TagTranslationPath(BaseModel):
 
 class TagCreate(BaseModel):
     label: str = Field(..., max_length=100)
+    category: TagCategory = Field(TagCategory.product, description="Tag category: 'product' or 'tip'")
 
 
 class TagUpdate(BaseModel):
     label: str | None = Field(None, max_length=100)
+    category: TagCategory | None = Field(None, description="Tag category: 'product' or 'tip'")
 
 
 class TagTranslationCreate(BaseModel):
@@ -120,7 +122,11 @@ def create_tag(
 
     # Set order to be after all existing tags
     max_order = tag_repo.get_max_order()
-    tag = Tag(label=body.label, order=max_order + 1)
+    tag = Tag(
+        label=body.label,
+        category=body.category,
+        order=max_order + 1,
+    )
     tag_repo.persist(tag)
     return flask.jsonify(tag_to_admin_dict(tag)), HTTPStatus.CREATED
 

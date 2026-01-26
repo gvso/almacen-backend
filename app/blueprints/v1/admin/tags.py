@@ -36,11 +36,17 @@ class TagTranslationPath(BaseModel):
 class TagCreate(BaseModel):
     label: str = Field(..., max_length=100)
     category: TagCategory = Field(TagCategory.product, description="Tag category: 'product' or 'tip'")
+    is_filterable: bool = Field(True, description="Whether the tag can be used as a filter")
+    bg_color: str = Field("#f5f5f4", max_length=7, description="Background color for the tag (hex format)")
+    text_color: str = Field("#57534e", max_length=7, description="Text color for the tag (hex format)")
 
 
 class TagUpdate(BaseModel):
     label: str | None = Field(None, max_length=100)
     category: TagCategory | None = Field(None, description="Tag category: 'product' or 'tip'")
+    is_filterable: bool | None = Field(None, description="Whether the tag can be used as a filter")
+    bg_color: str | None = Field(None, max_length=7, description="Background color for the tag (hex format)")
+    text_color: str | None = Field(None, max_length=7, description="Text color for the tag (hex format)")
 
 
 class TagTranslationCreate(BaseModel):
@@ -86,6 +92,9 @@ def tag_to_admin_dict(tag: Tag) -> dict[str, Any]:
     """Convert tag to dict with all translations for admin."""
     data = tag.as_dict()
     data["translations"] = [{"language": t.language, "label": t.label} for t in tag.translations]
+    data["is_filterable"] = tag.is_filterable
+    data["bg_color"] = tag.bg_color
+    data["text_color"] = tag.text_color
     return data
 
 
@@ -126,6 +135,9 @@ def create_tag(
         label=body.label,
         category=body.category,
         order=max_order + 1,
+        is_filterable=body.is_filterable,
+        bg_color=body.bg_color,
+        text_color=body.text_color,
     )
     tag_repo.persist(tag)
     return flask.jsonify(tag_to_admin_dict(tag)), HTTPStatus.CREATED

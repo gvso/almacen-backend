@@ -26,6 +26,9 @@ class Tag(ModelWithId, ModelWithDates):
         server_default=TagCategory.product.value,
     )
     order: Mapped[int] = mapped_column(sa.Integer(), nullable=False, server_default="0")
+    is_filterable: Mapped[bool] = mapped_column(sa.Boolean(), nullable=False, server_default="true")
+    bg_color: Mapped[str] = mapped_column(sa.String(7), nullable=False, server_default="#f5f5f4")
+    text_color: Mapped[str] = mapped_column(sa.String(7), nullable=False, server_default="#57534e")
 
     translations: Mapped[list["TagTranslation"]] = relationship(
         "TagTranslation", back_populates="tag", lazy="selectin", cascade="all, delete-orphan"

@@ -24,7 +24,7 @@ class TagRepo(Repo[Tag]):
         return self.get_query().filter(Tag.label == label).first()
 
     def get_tags_with_products_by_type(self, product_type: ProductType) -> list[Tag]:
-        """Get tags that have at least one active product of the specified type."""
+        """Get tags that have at least one active product of the specified type and are filterable."""
         return (
             self.get_query()
             .join(EntityTag, Tag.id == EntityTag.tag_id)
@@ -35,14 +35,18 @@ class TagRepo(Repo[Tag]):
                     EntityTag.entity_type == EntityType.product,
                 ),
             )
-            .filter(Product.type == product_type, Product.is_active.is_(True))
+            .filter(
+                Product.type == product_type,
+                Product.is_active.is_(True),
+                Tag.is_filterable.is_(True),
+            )
             .distinct()
             .order_by(Tag.order, Tag.label)
             .all()
         )
 
     def get_tags_with_tips_by_type(self, tip_type: TipType) -> list[Tag]:
-        """Get tags that have at least one active tip of the specified type."""
+        """Get tags that have at least one active tip of the specified type and are filterable."""
         return (
             self.get_query()
             .join(EntityTag, Tag.id == EntityTag.tag_id)
@@ -53,7 +57,11 @@ class TagRepo(Repo[Tag]):
                     EntityTag.entity_type == EntityType.tip,
                 ),
             )
-            .filter(Tip.tip_type == tip_type, Tip.is_active.is_(True))
+            .filter(
+                Tip.tip_type == tip_type,
+                Tip.is_active.is_(True),
+                Tag.is_filterable.is_(True),
+            )
             .distinct()
             .order_by(Tag.order, Tag.label)
             .all()

@@ -65,7 +65,8 @@ class Tip(ModelWithId, ModelWithDates):
         data = self.as_dict()
         translation = self.get_translation(language)
         if translation:
-            data["title"] = translation.title
+            if translation.title:
+                data["title"] = translation.title
             data["description"] = translation.description
         # Include tags with translations
         data["tags"] = [tag.to_dict_with_language(language) for tag in self.tags]
@@ -77,7 +78,7 @@ class TipTranslation(ModelWithId):
 
     tip_id: Mapped[int] = mapped_column(sa.ForeignKey("tips.id", ondelete="CASCADE"), nullable=False)
     language: Mapped[str] = mapped_column(sa.String(5), nullable=False)
-    title: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    title: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     description: Mapped[str] = mapped_column(sa.Text(), nullable=False)
 
     tip: Mapped["Tip"] = relationship("Tip", back_populates="translations")

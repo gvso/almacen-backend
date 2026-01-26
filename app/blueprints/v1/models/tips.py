@@ -40,7 +40,7 @@ class TipUpdate(BaseModel):
 
 class TipTranslationCreate(BaseModel):
     language: str = Field(..., max_length=5)
-    title: str = Field(..., max_length=255)
+    title: str | None = Field(None, max_length=255)
     description: str
 
 
